@@ -1,0 +1,161 @@
+﻿@page "/"
+@using PressBox.Challenge.Models.BrandData;
+@inject IPressBoxService pressboxService
+
+<h1>PressBox Graphics Technical Challenge</h1>
+<br />
+
+<div class="row">
+    <div class="col-sm-3">
+        <p>Please select a league to begin</p>
+        <select class="form-control" @onchange=GetLeague>
+            <option value="0"> @defaultOptionLeagueLst </option>
+            @foreach (var option in leagues)
+            {
+                <option value="@option.Id"> @option.Name </option>
+            }
+        </select>
+        <br />
+    </div>
+    @if (fixtures.Any())
+    {
+        <div class="col-sm-3">
+            <p>Please select a brand to add to your fixtures</p>
+            <select class="form-control" @onchange=GetBrands>
+                <option value="0"> @defaultOptionBrandLst </option>
+                @foreach (var option in brands)
+                {
+                    <option value="@option.Id"> @option.Name </option>
+                }
+            </select>
+            <br />
+        </div>
+    }
+</div>
+
+
+@if (fixtures.Any())
+{
+    <Virtualize Items="@fixtures" Context="f" OverscanCount="3">
+        <div class="row">
+            <div class="col-sm-2">
+                <p><BSBadge Color="BSColor.Danger" IsPill="true">ID :@f.Id</BSBadge></p>
+            </div>
+            <div class="col-sm-2">
+                <p><BSBadge Color="BSColor.Danger" IsPill="true">DATE: @f.Date</BSBadge></p>
+            </div>
+            <div class="col-sm-2">
+                <p><BSBadge Color="BSColor.Danger" IsPill="true">GAME WEEK: @f.GameWeek</BSBadge></p>
+            </div>
+        </div>
+
+        <BSCard Class="col-sm-12 col-lg-6" CardType="CardType.Card">
+            <BSCard CardType="CardType.Body">
+                <BSCard CardType="CardType.Title">
+                    <div class="row">
+                        <div class="col-sm-6">
+                            Home
+                        </div>
+                        <div class="col-sm-6">
+                            Away
+                        </div>
+                    </div>
+                </BSCard>
+                <BSCard CardType="CardType.Text">
+                    <div class="row">
+                        <div class="col-sm-6">
+                            @*ID :@data.HomeTeam.Id*@
+                            @if(f.HomeTeam.Brand is not null)
+                            {
+                                <p style="color:@f.HomeTeam.Brand.PrimaryColor">TEAM:@f.HomeTeam.Name</p>
+                            }else
+                            {
+                                <p>TEAM:@f.HomeTeam.Name</p>
+                            }
+                           
+                        </div>
+                        <div class="col-sm-6">
+                            @*ID :@data.AwayTeam.Id*@
+                            TEAM: @f.AwayTeam.Name
+                        </div>
+                    </div>
+                    @if (f.HomeTeam.Brand is not null)
+                    {
+                        <br />
+                        <p><BSBadge Color="BSColor.Success" IsPill="true">Sponsored by: @f.HomeTeam.Brand.Name</BSBadge></p>
+                    }
+                </BSCard>
+            </BSCard>
+        </BSCard>
+        <br />
+    </Virtualize>
+
+
+}
+else
+{
+    <p>You have no fixures. Try selecting another league</p>
+}
+
+@code {
+    private string defaultOptionLeagueLst = "Please choose a league";
+    private List<League> leagues { get; set; } = new List<League>();
+    private List<Fixture> fixtures { get; set; } = new List<Fixture>();
+    private int SelectedOption = 0;
+
+    private List<Brand> brands { get; set; } = new List<Brand>();
+    private List<BrandDetails> brandDetails { get; set; } = new List<BrandDetails>();
+    private string defaultOptionBrandLst = "Please choose a brand";
+
+    protected async override Task OnInitializedAsync()
+    {
+        leagues = await pressboxService.GetAllLeagues();
+        brands = await pressboxService.GetAllBrands();
+    }
+
+    private async void GetLeague(ChangeEventArgs e)
+    {
+        SelectedOption = Int32.Parse(e.Value.ToString());
+        if (SelectedOption > 0)
+        {
+            fixtures = await pressboxService.GetFixtures(SelectedOption);
+        }
+        else
+        {
+            fixtures = new List<Fixture>();
+        }
+
+        StateHasChanged();
+        SelectedOption = 0;
+    }
+
+    private async void GetBrands(ChangeEventArgs e)
+    {
+        SelectedOption = Int32.Parse(e.Value.ToString());
+        if (SelectedOption > 0)
+        {
+            brandDetails = await pressboxService.GetBrand(SelectedOption);
+
+            foreach (var brand in brandDetails)
+            {
+                foreach (var fixture in fixtures)
+                {
+                    if (brand.TeamID == fixture.HomeTeam.Id)
+                    {
+                        fixture.HomeTeam.Brand = new BrandForFixture();
+                        fixture.HomeTeam.Brand.Name = brand.Name;
+                        fixture.HomeTeam.Brand.PrimaryColor = brand.PrimaryColor;
+                    }
+                }
+            }
+        }
+        else
+        {
+            fixtures = new List<Fixture>();
+            brandDetails = new List<BrandDetails>();
+        }
+
+        StateHasChanged();
+        SelectedOption = 0;
+    }
+}

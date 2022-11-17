@@ -1,4 +1,5 @@
 using Microsoft.OpenApi.Models;
+using PressBox.Challenge.API.Model;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,6 +12,9 @@ builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "PressBox.Challenge.API", Version = "v1" });
 });
+builder.Services.AddHttpClient();
+builder.Services.AddOptions();
+builder.Services.Configure<EndpointConfiguration>(builder.Configuration.GetSection("Endpoint"));
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
